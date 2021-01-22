@@ -2,6 +2,10 @@
 
 This super simple project shows us how to configure WebClient's custom connect, read and write time out.
 
+In following code snippet we set connect timeout to 2 second and read timeout 2 second.
+
+> For test cases of this configuration, please look at [WebClientTimeoutTests](/src/test/java/com/tiket/poc/WebClientTimeoutTests.java).
+
 ```java
 import io.netty.handler.timeout.ReadTimeoutHandler;
 import java.util.concurrent.TimeUnit;
@@ -34,7 +38,7 @@ class ClientConfiguration {
 }
 ```
 
-For spring boot 2.2+
+Spring boot 2.2+
 
 ```java
 @Configuration(proxyBeanMethods = false)
@@ -58,4 +62,4 @@ class ClientConfiguration {
 }
 ```
 
-For testing of this custom time out configuration, please look at `com.tiket.poc.WebClientTimeoutTests`.
+When connect timed out request stream will throw `io.netty.channel.ConnectTimeoutException` and read timeout will throw `io.netty.handler.timeout.ReadTimeoutException`.

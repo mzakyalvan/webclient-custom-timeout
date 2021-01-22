@@ -1,6 +1,7 @@
 package com.tiket.poc;
 
 import io.netty.channel.ChannelOption;
+import io.netty.channel.ConnectTimeoutException;
 import io.netty.handler.timeout.ReadTimeoutException;
 import io.netty.handler.timeout.ReadTimeoutHandler;
 import java.time.Duration;
@@ -40,6 +41,32 @@ class WebClientTimeoutTests {
 
   @Autowired
   private WebClient.Builder webClients;
+
+  @Test
+  void whenConnectToHostTimedOut_thenShouldThrowConnectTimeoutError() {
+    WebClient webClient = webClients.clone()
+        .baseUrl("http://blahblah.com:23456")
+        .clientConnector(new ReactorClientHttpConnector(HttpClient.create()
+            .disableRetry(true)
+            .tcpConfiguration(tcp -> tcp
+                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 2000)
+                .doOnConnected(connection -> connection.addHandlerLast(new ReadTimeoutHandler(2000, TimeUnit.MILLISECONDS)))
+            )
+        ))
+        .build();
+
+    Mono<String> testStream = webClient.get()
+        .uri(builder -> builder.path("/ping").build())
+        .accept(MediaType.TEXT_PLAIN)
+        .retrieve().bodyToMono(String.class);
+
+    StepVerifier.create(testStream)
+        .expectSubscription().thenAwait()
+        .expectErrorSatisfies(error -> {
+          Assertions.assertThat(error).isInstanceOf(ConnectTimeoutException.class);
+        })
+        .verify(Duration.ofSeconds(10));
+  }
 
   @Test
   void whenRequestHandlingFastEnough_thenShouldReturnPong(MockServerClient mockServer) {
